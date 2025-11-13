@@ -1,5 +1,10 @@
 package model;
 
+/* A classe CONTA se encaixa como Information Expert pelo padrão GRASP, pois as funções do nosso "banco"
+   só podem ser realizadas pela classe CONTA já que é a única capaz de tomar decisões por possuir
+   toda a informação relevante para o algoritmo (SALDO, LIMITE).
+*/
+
 public class Conta {
     private String numero;
     private double saldo;
@@ -11,12 +16,29 @@ public class Conta {
         this.limite = limite;
     }
 
-    public boolean sacar(double valor) {
-        if (valor > 0 && (this.saldo + this.limite) >= valor) {
-            this.saldo -= valor;
-            return true;
+    public enum resultadoSaque {
+        SUCESSO,                  // Saldo normal
+        SUCESSO_CHEQUE_ESPECIAL,  // Precisou usar o limite
+        SALDO_INSUFICIENTE,       // Não tem saldo nem limite
+        VALOR_INVALIDO            // Valor negativo ou zero
+    }
+
+    public resultadoSaque sacar(double valor) {
+        if (valor <= 0) {
+            return resultadoSaque.VALOR_INVALIDO;
         }
-        return false;
+        // 1 - Tenta sacar do saldo normal
+        if (this.saldo >= valor) {
+            this.saldo -= valor;
+            return resultadoSaque.SUCESSO;
+        }
+        // 2 - Não tem saldo. Tenta sacar do limite (cheque especial)
+        if ((this.saldo + this.limite) >= valor) {
+            this.saldo -= valor; // O saldo vai ficar negativo
+            return resultadoSaque.SUCESSO_CHEQUE_ESPECIAL;
+        }
+        // 3. Sem saldo e sem limite
+        return resultadoSaque.SALDO_INSUFICIENTE;
     }
 
     public boolean depositar(double valor) {
@@ -25,6 +47,18 @@ public class Conta {
             return true;
         }
         return false;
+    }
+
+    public resultadoSaque transferir(Conta destino, double valor) {
+
+        resultadoSaque retornoSaque = this.sacar(valor);
+
+        if (retornoSaque == resultadoSaque.SUCESSO || retornoSaque == resultadoSaque.SUCESSO_CHEQUE_ESPECIAL)
+        {
+            destino.depositar(valor);
+            return retornoSaque;
+        }
+        return retornoSaque;
     }
 
     public double getSaldo() {
